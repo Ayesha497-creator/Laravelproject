@@ -34,16 +34,17 @@ pipeline {
       }
     }
 
-    stage('Deploy') {
-      steps {
-        echo 'Deploying to AWS webroot...'
-        sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ${DEPLOY_DIR}/"
-        sh "rsync -av ${PROJECT_DIR}/vendor/ ${DEPLOY_DIR}/vendor/"
-        sh "cp ${ENV_FILE} ${DEPLOY_DIR}/.env"
-      }
+stage('Deploy') {
+    steps {
+        echo 'Deploying to remote AWS webroot...'
+        sshagent(['deployserver']) {   // Jenkins me added SSH key ka ID
+            sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
+            sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
+            sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
+        }
     }
+}
 
-  }
   environment {
     PROJECT_DIR = '/home/ubuntu/larabbs'
     DEPLOY_DIR = '/var/www/demo1.flowsoftware.ky'
