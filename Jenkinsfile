@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'nodejs' 
+        nodejs 'nodejs'
     }
 
     environment {
@@ -30,16 +30,11 @@ pipeline {
                     echo "Installing PHP dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
 
-                    echo "Installing Node dependencies (npm ci)..."
-
-                    // ************** IMPORTANT FIX **************
-                    timeout(time: 40, unit: 'MINUTES') {
-                        sh 'npm ci'
-                    }
-                    // *******************************************
+                    echo "Installing Node dependencies (npm install)..."
+                    sh 'npm install'
 
                     echo "Building assets..."
-                    sh 'npm run prod || true'
+                    sh 'npm run prod || npm run build || true'
                 }
             }
         }
