@@ -24,8 +24,12 @@ pipeline {
                 dir("${PROJECT_DIR}") {
                     echo "Installing dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
-                    sh 'npm install'
-                    sh 'npm run prod || true'
+
+                    // Use NodeJS plugin wrapper to run npm commands
+                    nodejs('NodeJS 25.2.1') {
+                        sh 'npm install'
+                        sh 'npm run prod || true'
+                    }
                 }
             }
         }
