@@ -31,8 +31,9 @@ pipeline {
                     echo "Cleaning workspace..."
                     sh 'rm -rf node_modules'
 
-                    echo "Installing Node dependencies with caching..."
-                    sh "npm ci --cache ${NPM_CACHE} || npm install --cache ${NPM_CACHE}"
+                   echo "Installing Node dependencies..."
+sh 'npm install --cache /var/lib/jenkins/workspace/laravelproject@2/Laravelproject/.npm-cache'
+
                 }
             }
         }
