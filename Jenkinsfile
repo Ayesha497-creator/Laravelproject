@@ -1,14 +1,16 @@
 pipeline {
   agent any
   stages {
-    stage('Checkout') {
-      steps {
+   stage('Checkout') {
+    steps {
         dir(path: "${PROJECT_DIR}") {
-          git(branch: 'main', url: 'https://github.com/Ayesha497-creator/larabbs.git', credentialsId: 'github-pat')
+            git(branch: 'main', 
+                url: 'https://github.com/Ayesha497-creator/larabbs.git', 
+                credentialsId: 'github-token')
         }
-
-      }
     }
+}
+
 
     stage('Build') {
       steps {
