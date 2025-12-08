@@ -26,7 +26,7 @@ pipeline {
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
 
                     // Use NodeJS plugin wrapper to run npm commands
-                    nodejs('NodeJS 25.2.1') {
+                    nodejs('NodeJS 20.19.6') {
                         sh 'npm install'
                         sh 'npm run prod || true'
                     }
