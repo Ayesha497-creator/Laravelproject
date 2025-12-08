@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS 20.19.6' // Jenkins Tools me jo exact name hai
+    }
+
     environment {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky"
@@ -26,10 +30,8 @@ pipeline {
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
 
                     echo "Installing Node dependencies and building assets..."
-                    nodejs('NodeJS 20.19.6') {
-                        sh 'npm install'
-                        sh 'npm run prod || true'
-                    }
+                    sh 'npm install'
+                    sh 'npm run prod || true'
                 }
             }
         }
@@ -47,11 +49,8 @@ pipeline {
             steps {
                 echo "Deploying project to server..."
                 sshagent(['deployserver']) {
-                    // Sync project files except vendor
                     sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
-                    // Sync vendor folder separately
                     sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
-                    // Copy .env file
                     sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
                 }
             }
