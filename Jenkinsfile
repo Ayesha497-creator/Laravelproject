@@ -1,12 +1,11 @@
 pipeline {
     agent any
 
-    environment {
-        PROJECT_DIR = '/home/ubuntu/larabbs'
+  environment {
+        PROJECT_DIR = "${WORKSPACE}/larabbs"
         DEPLOY_DIR = '/var/www/demo1.flowsoftware.ky'
-        ENV_FILE = '/home/ubuntu/larabbs/.env'
+        ENV_FILE = "${WORKSPACE}/larabbs/.env"
     }
-
     stages {
         stage('Checkout') {
             steps {
