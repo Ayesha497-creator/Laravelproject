@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'NodeJS 20.19.6' // Jenkins Tools me jo exact name hai
+        nodejs 'nodejs' // Jenkins me jo exact name hai
     }
 
     environment {
@@ -49,8 +49,11 @@ pipeline {
             steps {
                 echo "Deploying project to server..."
                 sshagent(['deployserver']) {
+                    // Sync project files except vendor
                     sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
+                    // Sync vendor folder separately
                     sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
+                    // Copy .env file
                     sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
                 }
             }
