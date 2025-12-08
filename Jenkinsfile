@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
-        DEPLOY_DIR = '/var/www/demo1.flowsoftware.ky'
-        ENV_FILE = "${WORKSPACE}/Laravelproject/.env"
+        DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky"
+        ENV_FILE = "${PROJECT_DIR}/.env"
     }
 
     stages {
@@ -19,13 +19,13 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Install & Build') {
             steps {
                 dir("${PROJECT_DIR}") {
-                    echo "Installing dependencies..."
+                    echo "Installing PHP dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
 
-                    // Use NodeJS plugin wrapper to run npm commands
+                    echo "Installing Node dependencies and building assets..."
                     nodejs('NodeJS 20.19.6') {
                         sh 'npm install'
                         sh 'npm run prod || true'
@@ -45,10 +45,13 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "Deploying to remote AWS webroot..."
+                echo "Deploying project to server..."
                 sshagent(['deployserver']) {
+                    // Sync project files except vendor
                     sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
+                    // Sync vendor folder separately
                     sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
+                    // Copy .env file
                     sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
                 }
             }
@@ -60,7 +63,7 @@ pipeline {
             echo '✅ Deployment Successful!'
         }
         failure {
-            echo '❌ Build failed!'
+            echo '❌ Build or Deploy Failed!'
         }
     }
 }
