@@ -1,17 +1,19 @@
 pipeline {
     agent any
 
-  environment {
-        PROJECT_DIR = "${WORKSPACE}/larabbs"
+    environment {
+        PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = '/var/www/demo1.flowsoftware.ky'
-        ENV_FILE = "${WORKSPACE}/larabbs/.env"
+        ENV_FILE = "${WORKSPACE}/Laravelproject/.env"
     }
+
     stages {
+
         stage('Checkout') {
             steps {
-                dir(path: "${PROJECT_DIR}") {
-                    git branch: 'main', 
-                        url: 'https://github.com/Ayesha497-creator/larabbs.git', 
+                dir("${PROJECT_DIR}") {
+                    git branch: 'main',
+                        url: 'https://github.com/Ayesha497-creator/Laravelproject.git',
                         credentialsId: 'github-token'
                 }
             }
@@ -19,8 +21,8 @@ pipeline {
 
         stage('Build') {
             steps {
-                dir(path: "${PROJECT_DIR}") {
-                    echo 'Installing dependencies...'
+                dir("${PROJECT_DIR}") {
+                    echo "Installing dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
                     sh 'npm install'
                     sh 'npm run prod || true'
@@ -30,8 +32,8 @@ pipeline {
 
         stage('Test') {
             steps {
-                dir(path: "${PROJECT_DIR}") {
-                    echo 'Running Laravel tests...'
+                dir("${PROJECT_DIR}") {
+                    echo "Running Laravel tests..."
                     sh 'php artisan test || true'
                 }
             }
@@ -39,8 +41,8 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo 'Deploying to remote AWS webroot...'
-                sshagent(['deployserver']) {   // Jenkins me added SSH credentials ID
+                echo "Deploying to remote AWS webroot..."
+                sshagent(['deployserver']) {
                     sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
                     sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
                     sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
@@ -51,11 +53,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Build, Test & Deployment Successful! Check: https://demo1.flowsoftware.ky/'
+            echo '✅ Deployment Successful!'
         }
-
         failure {
-            echo '❌ Something went wrong! Check Jenkins logs.'
+            echo '❌ Build failed!'
         }
     }
 }
