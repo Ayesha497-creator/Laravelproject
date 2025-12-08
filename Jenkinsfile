@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'nodejs' // Jenkins me jo exact name hai
+        nodejs 'nodejs' 
     }
 
     environment {
@@ -26,11 +26,19 @@ pipeline {
         stage('Install & Build') {
             steps {
                 dir("${PROJECT_DIR}") {
+
                     echo "Installing PHP dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
 
-                    echo "Installing Node dependencies and building assets..."
-                    sh 'npm install'
+                    echo "Installing Node dependencies (npm ci)..."
+
+                    // ************** IMPORTANT FIX **************
+                    timeout(time: 40, unit: 'MINUTES') {
+                        sh 'npm ci'
+                    }
+                    // *******************************************
+
+                    echo "Building assets..."
                     sh 'npm run prod || true'
                 }
             }
@@ -39,7 +47,6 @@ pipeline {
         stage('Test') {
             steps {
                 dir("${PROJECT_DIR}") {
-                    echo "Running Laravel tests..."
                     sh 'php artisan test || true'
                 }
             }
@@ -47,13 +54,10 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "Deploying project to server..."
+                echo "Deploying project to the server..."
                 sshagent(['deployserver']) {
-                    // Sync project files except vendor
                     sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
-                    // Sync vendor folder separately
                     sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
-                    // Copy .env file
                     sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
                 }
             }
