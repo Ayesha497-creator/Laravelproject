@@ -9,6 +9,7 @@ pipeline {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky"
         ENV_FILE = "${PROJECT_DIR}/.env"
+        NPM_CACHE = "${PROJECT_DIR}/.npm-cache"
     }
 
     stages {
@@ -23,15 +24,25 @@ pipeline {
             }
         }
 
-        stage('Install & Build') {
+        stage('Clean & Install Node Dependencies') {
+            steps {
+                dir("${PROJECT_DIR}") {
+
+                    echo "Cleaning workspace..."
+                    sh 'rm -rf node_modules'
+
+                    echo "Installing Node dependencies with caching..."
+                    sh "npm ci --cache ${NPM_CACHE} || npm install --cache ${NPM_CACHE}"
+                }
+            }
+        }
+
+        stage('Install & Build PHP') {
             steps {
                 dir("${PROJECT_DIR}") {
 
                     echo "Installing PHP dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
-
-                    echo "Installing Node dependencies (npm install)..."
-                    sh 'npm install'
 
                     echo "Building assets..."
                     sh 'npm run prod || npm run build || true'
@@ -68,3 +79,4 @@ pipeline {
         }
     }
 }
+
