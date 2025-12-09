@@ -45,12 +45,10 @@ pipeline {
                 }
             }
         }
-
-       stage('Run Tests') {
+stage('Run Tests') {
     steps {
         dir("${PROJECT_DIR}") {
             echo "Running tests..."
-            // Copy .env, clear config cache, then run tests
             sh '''
             cp ${ENV_FILE} .env
             php artisan config:clear
@@ -59,6 +57,7 @@ pipeline {
         }
     }
 }
+
 
 
         stage('Deploy') {
