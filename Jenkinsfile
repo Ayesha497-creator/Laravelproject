@@ -1,16 +1,13 @@
 pipeline {
     agent any
-
     tools {
         nodejs 'nodejs'
     }
-
-    environment {
+environment {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
     }
-
     stages {
         stage('Checkout') {
             steps {
@@ -21,8 +18,7 @@ pipeline {
                 }
             }
         }
-
-        stage('Install Node & PHP Dependencies') {
+   stage('Install Node & PHP Dependencies') {
             steps {
                 dir("${PROJECT_DIR}") {
                     echo "Installing Node dependencies..."
@@ -37,7 +33,6 @@ pipeline {
                 }
             }
         }
-
         stage('Prepare .env') {
             steps {
                 dir("${PROJECT_DIR}") {
