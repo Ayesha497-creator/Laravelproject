@@ -18,21 +18,15 @@ environment {
                 }
             }
         }
-   stage('Install Node & PHP Dependencies') {
-            steps {
-                dir("${PROJECT_DIR}") {
-                    echo "Installing Node dependencies..."
-                    sh 'rm -rf node_modules'
-                    sh 'npm install'
-
-                    echo "Installing PHP dependencies..."
-                    sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
-
-                    echo "Building assets..."
-                    sh 'npm run prod || true'
-                }
-            }
+   stage('Build') {
+    steps {
+        dir("${PROJECT_DIR}") {
+            echo "Building assets..."
+            sh 'npm run prod || true'
         }
+    }
+}
+
         stage('Prepare .env') {
             steps {
                 dir("${PROJECT_DIR}") {
