@@ -23,19 +23,13 @@ pipeline {
             }
         }
 
-        stage('Install Node Dependencies') {
+        stage('Install Node & PHP Dependencies') {
             steps {
                 dir("${PROJECT_DIR}") {
                     echo "Installing Node dependencies..."
                     sh 'rm -rf node_modules'
                     sh 'npm install'
-                }
-            }
-        }
 
-        stage('Install PHP Dependencies & Build') {
-            steps {
-                dir("${PROJECT_DIR}") {
                     echo "Installing PHP dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
 
@@ -45,70 +39,31 @@ pipeline {
             }
         }
 
-        stage('Prepare Laravel') {
+        stage('Prepare .env') {
             steps {
                 dir("${PROJECT_DIR}") {
-                    echo "Setting permissions and environment..."
-                    sh 'sudo chown -R jenkins:jenkins storage bootstrap/cache || true'
-                    sh 'sudo chmod -R 775 storage bootstrap/cache || true'
-
                     sh '''
-                        cp ${ENV_FILE} .env || true
-                        php artisan config:clear || true
-                    '''
-
-                    sh '''
-                        if ! php artisan key:generate --show; then
-                            php artisan key:generate || true
+                        if [ ! -f .env ]; then
+                            cp .env.example .env
                         fi
                     '''
                 }
             }
         }
 
-        stage('Run Tests') {
+        stage('Deploy') {
             steps {
-                dir("${PROJECT_DIR}") {
-                    echo "Running tests..."
-                    sh 'php artisan test || true'
-                }
-            }
-        }
-
-        stage('Test SSH Connection') {
-            steps {
-                echo "Testing SSH connection to remote server..."
+                echo "Deploying to server..."
                 sshagent(['jenkins-deploy-key']) {
-                    sh "ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'uptime'"
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
+                        rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
+                        rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/
+                        scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
+                    """
                 }
             }
         }
-        stage('Prepare .env') {
-    steps {
-        dir("${PROJECT_DIR}") {
-            sh '''
-                if [ ! -f .env ]; then
-                    cp .env.example .env
-                fi
-            '''
-        }
-    }
-}
-
-
-       stage('Deploy') {
-    steps {
-        echo "Deploying to server..."
-        sshagent(['jenkins-deploy-key']) {
-            sh """
-                ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
-                rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
-                rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/
-                scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
-            """
-        }
-    }
-}
 
     } // end stages
 
