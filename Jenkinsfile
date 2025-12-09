@@ -39,8 +39,9 @@ pipeline {
                     echo "Installing PHP dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
 
-                    echo "Building assets..."
-                    sh 'npm run build || true'
+                 echo "Building assets..."
+                sh 'npm run prod || true'
+
                 }
             }
         }
