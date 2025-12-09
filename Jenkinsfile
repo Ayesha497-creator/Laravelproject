@@ -75,6 +75,15 @@ pipeline {
             }
         }
 
+        stage('Test SSH Connection') {
+            steps {
+                echo "Testing SSH connection to remote server..."
+                sshagent(['jenkins-deploy-key']) {
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'uptime'"
+                }
+            }
+        }
+
         stage('Deploy') {
             steps {
                 echo "Deploying to server..."
