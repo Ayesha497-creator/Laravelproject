@@ -39,38 +39,57 @@ pipeline {
                     echo "Installing PHP dependencies..."
                     sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
 
-                 echo "Building assets..."
-                sh 'npm run prod || true'
-
+                    echo "Building assets..."
+                    sh 'npm run prod || true'
                 }
             }
         }
-stage('Run Tests') {
-    steps {
-        dir("${PROJECT_DIR}") {
-            echo "Running tests..."
-            sh '''
-            cp ${ENV_FILE} .env
-            php artisan config:clear
-            php artisan test || true
-            '''
+
+        stage('Prepare Laravel') {
+            steps {
+                dir("${PROJECT_DIR}") {
+                    echo "Setting permissions and environment..."
+                    // Set correct permissions
+                    sh 'sudo chown -R jenkins:jenkins storage bootstrap/cache || true'
+                    sh 'sudo chmod -R 775 storage bootstrap/cache || true'
+
+                    // Copy .env and clear config
+                    sh '''
+                        cp ${ENV_FILE} .env || true
+                        php artisan config:clear || true
+                    '''
+
+                    // Generate app key if missing
+                    sh '''
+                        if ! php artisan key:generate --show; then
+                            php artisan key:generate || true
+                        fi
+                    '''
+                }
+            }
         }
-    }
-}
 
-
+        stage('Run Tests') {
+            steps {
+                dir("${PROJECT_DIR}") {
+                    echo "Running tests..."
+                    sh 'php artisan test || true'
+                }
+            }
+        }
 
         stage('Deploy') {
-    steps {
-        echo "Deploying to server..."
-        sshagent(['deploy-server']) { // updated ID
-            sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
-            sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
-            sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
+            steps {
+                echo "Deploying to server..."
+                sshagent(['deploy-server']) {
+                    sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
+                    sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
+                    sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
+                }
+            }
         }
-    }
-}
 
+    } // end stages
 
     post {
         success {
