@@ -84,19 +84,19 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
-            steps {
-                echo "Deploying to server..."
-                sshagent(['jenkins-deploy-key']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'mkdir -p ${DEPLOY_DIR}'
-                        rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
-                        rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/
-                        scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
-                    """
-                }
-            }
+       stage('Deploy') {
+    steps {
+        echo "Deploying to server..."
+        sshagent(['jenkins-deploy-key']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
+                rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
+                rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/
+                scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
+            """
         }
+    }
+}
 
     } // end stages
 
