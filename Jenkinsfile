@@ -46,13 +46,20 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
-            steps {
-                dir("${PROJECT_DIR}") {
-                    sh 'php artisan test || true'
-                }
-            }
+       stage('Run Tests') {
+    steps {
+        dir("${PROJECT_DIR}") {
+            echo "Running tests..."
+            // Copy .env, clear config cache, then run tests
+            sh '''
+            cp ${ENV_FILE} .env
+            php artisan config:clear
+            php artisan test || true
+            '''
         }
+    }
+}
+
 
         stage('Deploy') {
             steps {
