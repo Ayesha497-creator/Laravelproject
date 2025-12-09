@@ -83,6 +83,18 @@ pipeline {
                 }
             }
         }
+        stage('Prepare .env') {
+    steps {
+        dir("${PROJECT_DIR}") {
+            sh '''
+                if [ ! -f .env ]; then
+                    cp .env.example .env
+                fi
+            '''
+        }
+    }
+}
+
 
        stage('Deploy') {
     steps {
