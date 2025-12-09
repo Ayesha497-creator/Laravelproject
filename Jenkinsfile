@@ -7,21 +7,20 @@ pipeline {
 
     environment {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
-            DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
-
+        DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
     }
 
-   stage('Checkout') {
-    steps {
-        dir("${PROJECT_DIR}") {
-            git branch: "${BRANCH_NAME}",
-                url: 'https://github.com/Ayesha497-creator/Laravelproject.git',
-                credentialsId: 'github-token'
+    stages {
+        stage('Checkout') {
+            steps {
+                dir("${PROJECT_DIR}") {
+                    git branch: "${BRANCH_NAME}",
+                        url: 'https://github.com/Ayesha497-creator/Laravelproject.git',
+                        credentialsId: 'github-token'
+                }
+            }
         }
-    }
-}
-
 
         stage('Install Node & PHP Dependencies') {
             steps {
@@ -64,15 +63,14 @@ pipeline {
                 }
             }
         }
-
-    } // end stages
-
-post {
-    success {
-        echo "✅ Deployment Successful for branch: ${BRANCH_NAME}"
     }
-    failure {
-        echo "❌ Build or Deploy Failed for branch: ${BRANCH_NAME}"
+
+    post {
+        success {
+            echo "✅ Deployment Successful for branch: ${BRANCH_NAME}"
+        }
+        failure {
+            echo "❌ Build or Deploy Failed for branch: ${BRANCH_NAME}"
+        }
     }
 }
-
