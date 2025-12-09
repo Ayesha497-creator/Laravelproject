@@ -61,16 +61,16 @@ stage('Run Tests') {
 
 
         stage('Deploy') {
-            steps {
-                echo "Deploying to server..."
-                sshagent(['deployserver']) {
-                    sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
-                    sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
-                    sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
-                }
-            }
+    steps {
+        echo "Deploying to server..."
+        sshagent(['deploy-server']) { // updated ID
+            sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
+            sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
+            sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
         }
     }
+}
+
 
     post {
         success {
