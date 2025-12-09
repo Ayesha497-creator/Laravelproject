@@ -49,17 +49,14 @@ pipeline {
             steps {
                 dir("${PROJECT_DIR}") {
                     echo "Setting permissions and environment..."
-                    // Set correct permissions
                     sh 'sudo chown -R jenkins:jenkins storage bootstrap/cache || true'
                     sh 'sudo chmod -R 775 storage bootstrap/cache || true'
 
-                    // Copy .env and clear config
                     sh '''
                         cp ${ENV_FILE} .env || true
                         php artisan config:clear || true
                     '''
 
-                    // Generate app key if missing
                     sh '''
                         if ! php artisan key:generate --show; then
                             php artisan key:generate || true
@@ -81,10 +78,13 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo "Deploying to server..."
-                sshagent(['deploy-server']) {
-                    sh "rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/"
-                    sh "rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/"
-                    sh "scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env"
+                sshagent(['jenkins-deploy-key']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'mkdir -p ${DEPLOY_DIR}'
+                        rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
+                        rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/
+                        scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
+                    """
                 }
             }
         }
