@@ -9,6 +9,7 @@ pipeline {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
+        DEPLOY_URL = "http://demo1.flowsoftware.ky/${BRANCH_NAME}"
 
         // Slack webhook split for security
         SLACK_WEBHOOK_PART1 = "https://hooks.slack.com/services/"
@@ -69,7 +70,7 @@ pipeline {
             sh """
                 FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
                 curl -X POST -H 'Content-type: application/json' --data '{
-                    "text": "✅ *Deployment Successful!*\nBranch: ${BRANCH_NAME}\nProject: Laravelproject"
+                    "text": "✅ *Deployment Successful!*\nBranch: ${BRANCH_NAME}\nProject: Laravelproject\nURL: ${DEPLOY_URL}"
                 }' \$FULL_SLACK_WEBHOOK
             """
         }
@@ -79,9 +80,10 @@ pipeline {
             sh """
                 FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
                 curl -X POST -H 'Content-type: application/json' --data '{
-                    "text": "❌ *Deployment Failed!*\nBranch: ${BRANCH_NAME}\nPlease check Jenkins logs."
+                    "text": "❌ *Deployment Failed!*\nBranch: ${BRANCH_NAME}\nPlease check Jenkins logs.\nURL: ${DEPLOY_URL}"
                 }' \$FULL_SLACK_WEBHOOK
             """
         }
     }
 }
+
