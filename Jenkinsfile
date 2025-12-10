@@ -10,7 +10,7 @@ pipeline {
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
 
-        // Split Slack webhook URL into parts
+        // Slack webhook split for security
         SLACK_WEBHOOK_PART1 = "https://hooks.slack.com/services/"
         SLACK_WEBHOOK_PART2 = "T09TC4RGERG/B0A32EG5S8H/"
         SLACK_WEBHOOK_PART3 = "iYrJ9vPwxK0Ab6lY7UQdKs8W"
@@ -75,7 +75,7 @@ pipeline {
         }
 
         failure {
-            echo "❌ Build or Deploy Failed for branch: ${BRANCH_NAME}"
+            echo "❌ Deployment Failed for branch: ${BRANCH_NAME}"
             sh """
                 FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
                 curl -X POST -H 'Content-type: application/json' --data '{
