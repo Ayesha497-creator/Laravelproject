@@ -70,6 +70,42 @@
     @endif
 
     <div class="card">
-
       <div class="card-header bg-transparent">
-        <ul class=
+        <ul class="nav nav-pills">
+          <li class="nav-item">
+            <a class="nav-link {{ active_class(!if_query('order', 'recent')) }}" href="{{ Request::url() }}?order=default">
+              最后回复
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {{ active_class(if_query('order', 'recent')) }}" href="{{ Request::url() }}?order=recent">
+              最新发布
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card-body">
+        {{-- Topics list goes here --}}
+        @foreach($topics as $topic)
+          <div class="mb-3 p-3 bg-white rounded shadow-sm border">
+            <h5>{{ $topic->title }}</h5>
+            <p>{{ Str::limit($topic->body, 100) }}</p>
+          </div>
+        @endforeach
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-md-3">
+    {{-- Sidebar or extra content --}}
+  </div>
+</div>
+
+{{-- Branch badge --}}
+<div class="branch-badge">
+  {{ \Illuminate\Support\Facades\Artisan::call('env') ? env('APP_ENV') : 'main' }}
+</div>
+
+@endsection
+
