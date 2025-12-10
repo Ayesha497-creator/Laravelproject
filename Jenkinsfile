@@ -66,6 +66,29 @@ pipeline {
                 }
             }
         }
+
+        // ✅ Step 4: Clear caches & set permissions
+        stage('Optimize & Permissions') {
+            steps {
+                echo "Clearing caches and setting permissions..."
+                sshagent(['jenkins-deploy-key']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 '
+                            cd ${DEPLOY_DIR} &&
+                            php artisan config:clear &&
+                            php artisan cache:clear &&
+                            php artisan route:clear &&
+                            php artisan view:clear &&
+                            php artisan config:cache &&
+                            php artisan route:cache &&
+                            php artisan view:cache &&
+                            sudo chown -R www-data:www-data ${DEPLOY_DIR} &&
+                            sudo chmod -R 775 ${DEPLOY_DIR}/storage ${DEPLOY_DIR}/bootstrap/cache
+                        '
+                    """
+                }
+            }
+        }
     }
 
     post {
