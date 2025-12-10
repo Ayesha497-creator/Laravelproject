@@ -34,6 +34,21 @@
     background-color: #ec407a;
     border-radius: 999px;
   }
+
+  /* Branch badge styling */
+  .branch-badge {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #ff0;
+    color: #000;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    z-index: 9999;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
 </style>
 @endsection
 
@@ -68,23 +83,4 @@
               最新发布
             </a>
           </li>
-        </ul>
-      </div>
-
-      <div class="card-body">
-        {{-- 话题列表 --}}
-        @include('topics._topic_list', ['topics' => $topics])
-        {{-- 分页 --}}
-        <div class="mt-5">
-          {!! $topics->appends(Request::except('page'))->render() !!}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-lg-3 col-md-3 sidebar">
-    @include('topics._sidebar')
-  </div>
-</div>
-
-@endsection
+        </
