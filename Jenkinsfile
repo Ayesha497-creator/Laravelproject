@@ -9,7 +9,8 @@ pipeline {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
-        SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
+        SLACK_WEBHOOK = "https://hooks.slack.com/services/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
+"
     }
 
     stages {
