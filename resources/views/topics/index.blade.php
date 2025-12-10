@@ -35,6 +35,12 @@
 
 @section('content')
 
+<div class="mb-4 p-4 bg-white rounded shadow-sm">
+  <p class="mb-2">Hi, I am Ayesha.</p>
+  <p class="mb-2">Welcome to the community — explore the latest topics and join the discussion.</p>
+  <p class="mb-0">Feel free to browse, reply, or start your own thread anytime.</p>
+</div>
+
 <div class="row mb-5">
   <div class="col-lg-9 col-md-9 topic-list">
 
@@ -78,4 +84,3 @@
 </div>
 
 @endsection
-
