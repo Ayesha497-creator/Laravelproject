@@ -7,7 +7,6 @@ pipeline {
 
     environment {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
-        DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
 
         // Slack webhook split for security
@@ -50,42 +49,51 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "Deploying to server..."
-                sshagent(['jenkins-deploy-key']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
+                script {
+                    // Set DEPLOY_DIR based on branch
+                    def DEPLOY_DIR = (BRANCH_NAME == "main") ? "/var/www/demo1.flowsoftware.ky/main" : "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
 
-                        # ✅ Correctly sync vendor
-                        rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/
+                    echo "Deploying branch ${BRANCH_NAME} to ${DEPLOY_DIR}..."
 
-                        # ✅ Sync all other project files except vendor
-                        rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
+                    sshagent(['jenkins-deploy-key']) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
 
-                        scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
-                    """
+                            # Sync vendor
+                            rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/
+
+                            # Sync rest of project except vendor
+                            rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
+
+                            # Copy .env
+                            scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
+                        """
+                    }
                 }
             }
         }
 
-        // ✅ Step 4: Clear caches & set permissions
         stage('Optimize & Permissions') {
             steps {
-                echo "Clearing caches and setting permissions..."
-                sshagent(['jenkins-deploy-key']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 '
-                            cd ${DEPLOY_DIR} &&
-                            php artisan config:clear &&
-                            php artisan cache:clear &&
-                            php artisan route:clear &&
-                            php artisan view:clear &&
-                            php artisan config:cache &&
-                            php artisan route:cache &&
-                            php artisan view:cache &&
-                            sudo chown -R www-data:www-data ${DEPLOY_DIR} &&
-                            sudo chmod -R 775 ${DEPLOY_DIR}/storage ${DEPLOY_DIR}/bootstrap/cache
-                        '
-                    """
+                script {
+                    def DEPLOY_DIR = (BRANCH_NAME == "main") ? "/var/www/demo1.flowsoftware.ky/main" : "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
+
+                    sshagent(['jenkins-deploy-key']) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 '
+                                cd ${DEPLOY_DIR} &&
+                                php artisan config:clear &&
+                                php artisan cache:clear &&
+                                php artisan route:clear &&
+                                php artisan view:clear &&
+                                php artisan config:cache &&
+                                php artisan route:cache &&
+                                php artisan view:cache &&
+                                sudo chown -R www-data:www-data ${DEPLOY_DIR} &&
+                                sudo chmod -R 775 ${DEPLOY_DIR}/storage ${DEPLOY_DIR}/bootstrap/cache
+                            '
+                        """
+                    }
                 }
             }
         }
