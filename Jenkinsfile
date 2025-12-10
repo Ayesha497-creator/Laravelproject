@@ -9,7 +9,7 @@ pipeline {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
-      SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
+      SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
 
     }
 
@@ -44,17 +44,15 @@ pipeline {
                 }
             }
         }
-        stage('Test') {
+      stage('Test') {
     steps {
         dir("${PROJECT_DIR}") {
             echo "Running Laravel backend tests and sending output to Slack..."
 
-            sh """
+            sh '''
                 php artisan test | tee /tmp/test-output.txt
-                curl -X POST -H 'Content-type: application/json' --data '{
-                    "text": "*Laravel Backend Test Output:*\n\`\`\`'"\$(cat /tmp/test-output.txt)"'\`\`\`"
-                }' ${SLACK_WEBHOOK}
-            """
+                curl -X POST -H "Content-type: application/json" --data "{\"text\": \"*Laravel Backend Test Output:*\n```\$(cat /tmp/test-output.txt)```\"}" ${SLACK_WEBHOOK}
+            '''
         }
     }
 }
