@@ -1,13 +1,17 @@
 pipeline {
     agent any
+
     tools {
         nodejs 'nodejs'
     }
-environment {
+
+    environment {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
+        SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
     }
+
     stages {
         stage('Checkout') {
             steps {
@@ -18,14 +22,15 @@ environment {
                 }
             }
         }
-   stage('Build') {
-    steps {
-        dir("${PROJECT_DIR}") {
-            echo "Building assets..."
-            sh 'npm run prod || true'
+
+        stage('Build') {
+            steps {
+                dir("${PROJECT_DIR}") {
+                    echo "Building assets..."
+                    sh 'npm run prod || true'
+                }
+            }
         }
-    }
-}
 
         stage('Prepare .env') {
             steps {
@@ -57,9 +62,20 @@ environment {
     post {
         success {
             echo "✅ Deployment Successful for branch: ${BRANCH_NAME}"
+            sh """
+                curl -X POST -H 'Content-type: application/json' --data '{
+                    "text": "✅ *Deployment Successful!*\nBranch: ${BRANCH_NAME}\nProject: Laravelproject"
+                }' ${SLACK_WEBHOOK}
+            """
         }
+
         failure {
             echo "❌ Build or Deploy Failed for branch: ${BRANCH_NAME}"
+            sh """
+                curl -X POST -H 'Content-type: application/json' --data '{
+                    "text": "❌ *Deployment Failed!*\nBranch: ${BRANCH_NAME}\nPlease check Jenkins logs."
+                }' ${SLACK_WEBHOOK}
+            """
         }
     }
 }
