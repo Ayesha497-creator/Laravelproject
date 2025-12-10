@@ -45,18 +45,22 @@ pipeline {
             }
         }
 
-     stage('Deploy') {
+    stage('Deploy') {
     steps {
         echo "Deploying to server..."
         sshagent(['jenkins-deploy-key']) {
             sh """
                 ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
+                # Rsync vendor folder, ignore if it doesn't exist
+                rsync -av --ignore-missing-args ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/ || true
+                # Rsync rest of the project excluding vendor
                 rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
                 scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
             """
         }
     }
 }
+
 
     }
 
