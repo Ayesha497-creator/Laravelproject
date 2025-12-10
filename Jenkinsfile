@@ -23,15 +23,9 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build Assets') {
             steps {
                 dir("${PROJECT_DIR}") {
-                    echo "Installing PHP dependencies..."
-                    sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
-
-                    echo "Installing Node.js dependencies..."
-                    sh 'npm install'
-
                     echo "Building assets..."
                     sh 'npm run prod'
                 }
@@ -85,3 +79,4 @@ pipeline {
         }
     }
 }
+
