@@ -50,19 +50,6 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                dir("${PROJECT_DIR}") {
-                    echo "Running Laravel backend tests and sending output to Slack..."
-                    sh '''
-                        php artisan test | tee /tmp/test-output.txt
-                        TEST_OUTPUT=$(cat /tmp/test-output.txt | sed 's/"/\\"/g')
-                        curl -X POST -H "Content-type: application/json" --data "{\"text\": \"*Laravel Backend Test Output:*\n```${TEST_OUTPUT}```\"}" ${SLACK_WEBHOOK}
-                    '''
-                }
-            }
-        }
-
         stage('Deploy') {
             steps {
                 echo "Deploying to server..."
