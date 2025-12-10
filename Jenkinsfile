@@ -9,8 +9,7 @@ pipeline {
         PROJECT_DIR = "${WORKSPACE}/Laravelproject"
         DEPLOY_DIR = "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
         ENV_FILE = "${PROJECT_DIR}/.env"
-      SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
-
+        SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
     }
 
     stages {
@@ -27,8 +26,14 @@ pipeline {
         stage('Build') {
             steps {
                 dir("${PROJECT_DIR}") {
+                    echo "Installing PHP dependencies..."
+                    sh 'composer install --no-interaction --prefer-dist --optimize-autoloader'
+
+                    echo "Installing Node.js dependencies..."
+                    sh 'npm install'
+
                     echo "Building assets..."
-                    sh 'npm run prod || true'
+                    sh 'npm run prod'
                 }
             }
         }
@@ -44,37 +49,33 @@ pipeline {
                 }
             }
         }
-      stage('Test') {
-    steps {
-        dir("${PROJECT_DIR}") {
-            echo "Running Laravel backend tests and sending output to Slack..."
 
-            sh '''
-                php artisan test | tee /tmp/test-output.txt
-                curl -X POST -H "Content-type: application/json" --data "{\"text\": \"*Laravel Backend Test Output:*\n```\$(cat /tmp/test-output.txt)```\"}" ${SLACK_WEBHOOK}
-            '''
+        stage('Test') {
+            steps {
+                dir("${PROJECT_DIR}") {
+                    echo "Running Laravel backend tests and sending output to Slack..."
+                    sh '''
+                        php artisan test | tee /tmp/test-output.txt
+                        TEST_OUTPUT=$(cat /tmp/test-output.txt | sed 's/"/\\"/g')
+                        curl -X POST -H "Content-type: application/json" --data "{\"text\": \"*Laravel Backend Test Output:*\n```${TEST_OUTPUT}```\"}" ${SLACK_WEBHOOK}
+                    '''
+                }
+            }
         }
-    }
-}
 
-
-    stage('Deploy') {
-    steps {
-        echo "Deploying to server..."
-        sshagent(['jenkins-deploy-key']) {
-            sh """
-                ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
-                # Rsync vendor folder, ignore if it doesn't exist
-                rsync -av --ignore-missing-args ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/ || true
-                # Rsync rest of the project excluding vendor
-                rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
-                scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
-            """
+        stage('Deploy') {
+            steps {
+                echo "Deploying to server..."
+                sshagent(['jenkins-deploy-key']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
+                        rsync -av --ignore-missing-args ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/ || true
+                        rsync -av --exclude='vendor' ${PROJECT_DIR}/ ubuntu@13.61.68.173:${DEPLOY_DIR}/
+                        scp ${ENV_FILE} ubuntu@13.61.68.173:${DEPLOY_DIR}/.env
+                    """
+                }
+            }
         }
-    }
-}
-
-
     }
 
     post {
