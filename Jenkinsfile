@@ -26,28 +26,34 @@ pipeline {
         }
 
         stage('Install & Build Assets') {
-            steps {
-                dir("${PROJECT_DIR}") {
-                    echo "📦 Installing npm dependencies..."
-                    sh "npm install --legacy-peer-deps"
-
-                    echo '🎨 Building Laravel Mix assets...'
-                    sh "npm run production"
-                }
-            }
+    steps {
+        dir("${PROJECT_DIR}") {
+            sh "npm install --legacy-peer-deps"
+            sh "npm run production"
         }
+    }
+}
 
-        stage('Prepare .env') {
-            steps {
-                dir("${PROJECT_DIR}") {
-                    sh '''
-                        if [ ! -f .env ]; then
-                            cp .env.example .env
-                        fi
-                    '''
-                }
-            }
+stage('Install PHP Dependencies') {
+    steps {
+        dir("${PROJECT_DIR}") {
+            sh "composer install --no-dev --optimize-autoloader"
         }
+    }
+}
+
+stage('Prepare .env') {
+    steps {
+        dir("${PROJECT_DIR}") {
+            sh '''
+                if [ ! -f .env ]; then
+                    cp .env.example .env
+                fi
+            '''
+        }
+    }
+}
+
 
         stage('Deploy') {
             steps {
