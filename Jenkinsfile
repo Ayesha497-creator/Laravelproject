@@ -24,21 +24,18 @@ pipeline {
             }
         }
 
-        stage('Install & Build Assets') {
+      stage('Install & Build Assets') {
     steps {
         dir("${PROJECT_DIR}") {
-
             echo "📦 Installing npm dependencies..."
             sh "npm install --legacy-peer-deps"
 
-            echo "⚙ Installing missing webpack packages..."
-            sh "npm install webpack webpack-cli --save-dev --legacy-peer-deps"
-
             echo '🎨 Building Laravel Mix assets...'
-            sh "./node_modules/.bin/webpack --mode production"
+            sh "npm run production"
         }
     }
 }
+
 
 
         stage('Prepare .env') {
@@ -111,27 +108,33 @@ pipeline {
         }
     }
 
-    post {
-        success {
-            echo "✅ Deployment Successful"
+   post {
+    success {
+        echo "✅ Deployment Successful"
 
-            sh """
-                FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
-                curl -X POST -H 'Content-type: application/json' --data '{
-                    "text": "✅ *Deployment Successful!*\nBranch: ${BRANCH_NAME}\nProject: Laravelproject"
-                }' \$FULL_SLACK_WEBHOOK
-            """
-        }
+        // Slack notification temporarily disabled
+        /*
+        sh """
+            FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
+            curl -X POST -H 'Content-type: application/json' --data '{
+                "text": "✅ *Deployment Successful!*\nBranch: ${BRANCH_NAME}\nProject: Laravelproject"
+            }' \$FULL_SLACK_WEBHOOK
+        """
+        */
+    }
 
-        failure {
-            echo "❌ Deployment Failed"
+    failure {
+        echo "❌ Deployment Failed"
 
-            sh """
-                FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
-                curl -X POST -H 'Content-type: application/json' --data '{
-                    "text": "❌ *Deployment Failed!*\nBranch: ${BRANCH_NAME}\nPlease check Jenkins logs."
-                }' \$FULL_SLACK_WEBHOOK
-            """
-        }
+        // Slack notification temporarily disabled
+        /*
+        sh """
+            FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
+            curl -X POST -H 'Content-type: application/json' --data '{
+                "text": "❌ *Deployment Failed!*\nBranch: ${BRANCH_NAME}\nPlease check Jenkins logs."
+            }' \$FULL_SLACK_WEBHOOK
+        """
+        */
     }
 }
+
