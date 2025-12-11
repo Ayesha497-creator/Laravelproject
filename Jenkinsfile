@@ -77,36 +77,29 @@ pipeline {
             }
         }
 
-        // Laravel Optimize stage removed for test branch
     }
 
     post {
         success {
             echo "✅ Deployment Successful"
-
-            // Slack notification temporarily disabled
-            /*
             sh """
                 FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
                 curl -X POST -H 'Content-type: application/json' --data '{
                     "text": "✅ *Deployment Successful!*\nBranch: ${BRANCH_NAME}\nProject: Laravelproject"
                 }' \$FULL_SLACK_WEBHOOK
             """
-            */
+            
         }
 
         failure {
             echo "❌ Deployment Failed"
-
-            // Slack notification temporarily disabled
-            /*
             sh """
                 FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
                 curl -X POST -H 'Content-type: application/json' --data '{
                     "text": "❌ *Deployment Failed!*\nBranch: ${BRANCH_NAME}\nPlease check Jenkins logs."
                 }' \$FULL_SLACK_WEBHOOK
             """
-            */
+            
         }
     }
 }
