@@ -24,19 +24,17 @@ pipeline {
             }
         }
 
-      stage('Install & Build Assets') {
-    steps {
-        dir("${PROJECT_DIR}") {
-            echo "📦 Installing npm dependencies..."
-            sh "npm install --legacy-peer-deps"
+        stage('Install & Build Assets') {
+            steps {
+                dir("${PROJECT_DIR}") {
+                    echo "📦 Installing npm dependencies..."
+                    sh "npm install --legacy-peer-deps"
 
-            echo '🎨 Building Laravel Mix assets...'
-            sh "npm run production"
+                    echo '🎨 Building Laravel Mix assets...'
+                    sh "npm run production"
+                }
+            }
         }
-    }
-}
-
-
 
         stage('Prepare .env') {
             steps {
@@ -79,62 +77,36 @@ pipeline {
             }
         }
 
-        stage('Laravel Optimize') {
-            steps {
-                script {
-                    def DEPLOY_DIR = (BRANCH_NAME == "main") ?
-                        "/var/www/demo1.flowsoftware.ky/main" :
-                        "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
+        // Laravel Optimize stage removed for test branch
+    }
 
-                    sshagent(['jenkins-deploy-key']) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 '
-                                cd ${DEPLOY_DIR} &&
-                                composer install --no-dev --optimize-autoloader &&
-                                php artisan config:clear &&
-                                php artisan cache:clear &&
-                                php artisan route:clear &&
-                                php artisan view:clear &&
-                                php artisan config:cache &&
-                                php artisan route:cache &&
-                                php artisan view:cache &&
-                                sudo chown -R www-data:www-data ${DEPLOY_DIR} &&
-                                sudo chmod -R 775 storage bootstrap/cache
-                            '
-                        """
-                    }
-                }
-            }
+    post {
+        success {
+            echo "✅ Deployment Successful"
+
+            // Slack notification temporarily disabled
+            /*
+            sh """
+                FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
+                curl -X POST -H 'Content-type: application/json' --data '{
+                    "text": "✅ *Deployment Successful!*\nBranch: ${BRANCH_NAME}\nProject: Laravelproject"
+                }' \$FULL_SLACK_WEBHOOK
+            """
+            */
+        }
+
+        failure {
+            echo "❌ Deployment Failed"
+
+            // Slack notification temporarily disabled
+            /*
+            sh """
+                FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
+                curl -X POST -H 'Content-type: application/json' --data '{
+                    "text": "❌ *Deployment Failed!*\nBranch: ${BRANCH_NAME}\nPlease check Jenkins logs."
+                }' \$FULL_SLACK_WEBHOOK
+            """
+            */
         }
     }
-
-   post {
-    success {
-        echo "✅ Deployment Successful"
-
-        // Slack notification temporarily disabled
-        /*
-        sh """
-            FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
-            curl -X POST -H 'Content-type: application/json' --data '{
-                "text": "✅ *Deployment Successful!*\nBranch: ${BRANCH_NAME}\nProject: Laravelproject"
-            }' \$FULL_SLACK_WEBHOOK
-        """
-        */
-    }
-
-    failure {
-        echo "❌ Deployment Failed"
-
-        // Slack notification temporarily disabled
-        /*
-        sh """
-            FULL_SLACK_WEBHOOK=\$SLACK_WEBHOOK_PART1\$SLACK_WEBHOOK_PART2\$SLACK_WEBHOOK_PART3
-            curl -X POST -H 'Content-type: application/json' --data '{
-                "text": "❌ *Deployment Failed!*\nBranch: ${BRANCH_NAME}\nPlease check Jenkins logs."
-            }' \$FULL_SLACK_WEBHOOK
-        """
-        */
-    }
 }
-
