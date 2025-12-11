@@ -30,6 +30,7 @@ pipeline {
             steps {
                 dir("${PROJECT_DIR}") {
                     echo "Building assets..."
+                    sh 'npm install --legacy-peer-deps'
                     sh 'npm run prod'
                 }
             }
@@ -50,14 +51,16 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Set DEPLOY_DIR based on branch
                     def DEPLOY_DIR = (BRANCH_NAME == "main") ? "/var/www/demo1.flowsoftware.ky/main" : "/var/www/demo1.flowsoftware.ky/${BRANCH_NAME}"
 
                     echo "Deploying branch ${BRANCH_NAME} to ${DEPLOY_DIR}..."
 
                     sshagent(['jenkins-deploy-key']) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 'sudo mkdir -p ${DEPLOY_DIR} && sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}'
+                            ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 '
+                                sudo mkdir -p ${DEPLOY_DIR} &&
+                                sudo chown -R ubuntu:ubuntu ${DEPLOY_DIR}
+                            '
 
                             # Sync vendor
                             rsync -av ${PROJECT_DIR}/vendor/ ubuntu@13.61.68.173:${DEPLOY_DIR}/vendor/
@@ -82,6 +85,8 @@ pipeline {
                         sh """
                             ssh -o StrictHostKeyChecking=no ubuntu@13.61.68.173 '
                                 cd ${DEPLOY_DIR} &&
+
+                                # Clear & cache Laravel config, routes, views
                                 php artisan config:clear &&
                                 php artisan cache:clear &&
                                 php artisan route:clear &&
@@ -89,6 +94,8 @@ pipeline {
                                 php artisan config:cache &&
                                 php artisan route:cache &&
                                 php artisan view:cache &&
+
+                                # Set proper permissions for runtime
                                 sudo chown -R www-data:www-data ${DEPLOY_DIR} &&
                                 sudo chmod -R 775 ${DEPLOY_DIR}/storage ${DEPLOY_DIR}/bootstrap/cache
                             '
