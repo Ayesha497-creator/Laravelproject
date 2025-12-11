@@ -25,17 +25,21 @@ pipeline {
         }
 
         stage('Install & Build Assets') {
-            steps {
-                dir("${PROJECT_DIR}") {
+    steps {
+        dir("${PROJECT_DIR}") {
 
-                    echo "📦 Installing npm packages..."
-                    sh 'npm install'
+            echo "📦 Installing npm dependencies..."
+            sh "npm install --legacy-peer-deps"
 
-                    echo "🎨 Building assets using Laravel Mix..."
-                    sh './node_modules/.bin/mix --production'
-                }
-            }
+            echo "⚙ Installing missing webpack packages..."
+            sh "npm install webpack webpack-cli --save-dev --legacy-peer-deps"
+
+            echo '🎨 Building Laravel Mix assets...'
+            sh "./node_modules/.bin/webpack --mode production"
         }
+    }
+}
+
 
         stage('Prepare .env') {
             steps {
