@@ -4,35 +4,59 @@ pipeline {
     environment {
         REMOTE_USER = "ubuntu"
         REMOTE_HOST = "13.61.68.173"
-        BRANCH_NAME = "development"
-      PROJECT = "laravel"
-
-        SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
+        PROJECT = "laravel"
+        ENV_NAME = "${BRANCH_NAME}"         
+        // SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
     }
 
-    stages {
-        stage('Deploy & Build') {
+    stages {  
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube-Server') {
+                    sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
+                        -Dsonar.projectKey=laravel-project \
+                        -Dsonar.sources=. \
+                        -Dsonar.qualitygate.wait=true
+                    """
+                }
+            }
+        }
+
+        stage("Quality Gate") {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                expression { 
+                    return currentBuild.result == null || currentBuild.result == 'SUCCESS' 
+                }
+            }
             steps {
                 script {
-                    def PROJECT_DIR = "/var/www/html/development/${env.PROJECT}"
+                    def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
 
                     sshagent(['jenkins-deploy-key']) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
-                            cd ${PROJECT_DIR} &&
-                            echo "Deploying ${PROJECT}..." &&
-                            git pull origin ${BRANCH_NAME}
+                            set -e
+                            cd ${PROJECT_DIR}
+                            echo "Gate Passed! Starting Deployment for ${PROJECT}..."
 
-                            if [ -f package.json ]; then
-                                echo "Node project (Vue / Next) detected"
-                                rm -rf dist
-                                npm run build
-                            fi
+                            git pull origin ${ENV_NAME}
 
-                            if [ -f composer.json ]; then
-                                echo "Laravel project detected"
-                                composer install --no-dev --optimize-autoloader
-                                php artisan migrate --force
+                            if [ "${PROJECT}" = "vue" ] || [ "${PROJECT}" = "next" ]; then
+                                npm run build -- --mode ${ENV_NAME}
+                                if [ "${PROJECT}" = "next" ]; then
+                                    pm2 restart "Next-${ENV_NAME}"
+                                    pm2 save
+                                fi
+                            elif [ "${PROJECT}" = "laravel" ]; then
+                                php artisan optimize
                             fi
                         '
                         """
@@ -40,25 +64,24 @@ pipeline {
                 }
             }
         }
-    }
-    post {
-    success {
-        sh '''
-        curl -s -X POST -H "Content-type: application/json" \
-        --data '{
-            "text": "✅ Deployment SUCCESS\nProject: '"${PROJECT}"'\nBranch: '"${BRANCH_NAME}"'"
-        }' \
-        '"${SLACK_WEBHOOK}"' || true
-        '''
-    }
+    } 
 
-    failure {
-        sh '''
-        curl -s -X POST -H "Content-type: application/json" \
-        --data '{
-            "text": "❌ Deployment FAILED\nProject: '"${PROJECT}"'\nBranch: '"${BRANCH_NAME}"'"
-        }' \
-        '"${SLACK_WEBHOOK}"' || true
-        '''
+    /*
+    post {
+        success {
+            sh """
+            curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"✅ ${PROJECT} → ${ENV_NAME} deployed successfully!"}' \
+            \$SLACK_WEBHOOK
+            """
+        }
+        failure {
+            sh """
+            curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"❌ ${PROJECT} → ${ENV_NAME} deployment failed!"}' \
+            \$SLACK_WEBHOOK
+            """
+        }
     }
+    */
 }
