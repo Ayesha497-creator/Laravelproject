@@ -17,6 +17,7 @@ pipeline {
                         -Dsonar.projectKey=laravel-project \
                         -Dsonar.sources=. \
                         -Dsonar.qualitygate.wait=true
+                        -Dsonar.exclusions=vendor/**,node_modules/**,public/packages/**,storage/**,bootstrap/cache/**,resources/assets/vendor/**
                     """
                 }
             }
