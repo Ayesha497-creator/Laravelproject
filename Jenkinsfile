@@ -11,22 +11,21 @@ pipeline {
     }
 
     stages {  
-        stage('SonarQube Analysis') {
-            steps {
-                script { 
-                    FAILED_STAGE = "SonarQube Analysis" 
-                }
-                
-                withSonarQubeEnv('SonarQube-Server') {
-                    sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
-                        -Dsonar.projectKey=${PROJECT}-project \
-                        -Dsonar.sources=. \
-                      
-                        -Dsonar.exclusions=vendor/**,node_modules/**,public/packages/**,storage/**,bootstrap/cache/**,resources/assets/vendor/**
-                    """
-                }
-            }
+       stage('SonarQube Analysis') {
+    steps {
+        script { 
+            FAILED_STAGE = "SonarQube Analysis" 
         }
+        
+        withSonarQubeEnv('SonarQube-Server') {
+            sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
+                -Dsonar.projectKey=${PROJECT}-project \
+                -Dsonar.sources=. \
+                -Dsonar.exclusions=vendor/**,node_modules/**,public/packages/**,storage/**,bootstrap/cache/**,resources/assets/vendor/**
+            """
+        }
+    }
+}
 
         stage("Quality Gate") {
             steps {
