@@ -1,3 +1,6 @@
+// 1. Variable ko Pipeline se BAHAR define kiya taake ye update ho sakay
+def FAILED_STAGE = "Initialization"
+
 pipeline {
     agent any
 
@@ -7,22 +10,21 @@ pipeline {
         PROJECT = "laravel"
         ENV_NAME = "${BRANCH_NAME}"
         
-        // 1. Webhook ko uncomment karein
+        // Webhook setup
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK') 
-        
-        // 2. Default stage name set karein (agar shuru mein hi fail ho jaye)
-        FAILED_STAGE = "Initialization" 
     }
 
     stages {  
         stage('SonarQube Analysis') {
             steps {
-                // 3. Stage ka naam update karein
-                script { env.FAILED_STAGE = "SonarQube Analysis" }
+                script { 
+                    // 2. Yahan variable update hoga (bina 'env.' ke)
+                    FAILED_STAGE = "SonarQube Analysis" 
+                }
                 
                 withSonarQubeEnv('SonarQube-Server') {
                     sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
-                        -Dsonar.projectKey=laravel-project \
+                        -Dsonar.projectKey=${PROJECT}-project \
                         -Dsonar.sources=. \
                         -Dsonar.qualitygate.wait=true \
                         -Dsonar.exclusions=vendor/**,node_modules/**,public/packages/**,storage/**,bootstrap/cache/**,resources/assets/vendor/**
@@ -33,8 +35,7 @@ pipeline {
 
         stage("Quality Gate") {
             steps {
-                // 3. Stage ka naam update karein
-                script { env.FAILED_STAGE = "Quality Gate" }
+                script { FAILED_STAGE = "Quality Gate" }
                 
                 timeout(time: 1, unit: 'HOURS') {
                     waitForQualityGate abortPipeline: true
@@ -50,8 +51,7 @@ pipeline {
             }
             steps {
                 script {
-                    // 3. Stage ka naam update karein
-                    env.FAILED_STAGE = "Deploy Stage"
+                    FAILED_STAGE = "Deploy Stage"
                     
                     def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
 
@@ -59,18 +59,27 @@ pipeline {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
                             set -e
+                            
+                            # Directory check
+                            if [ ! -d "${PROJECT_DIR}" ]; then
+                                echo "Directory ${PROJECT_DIR} does not exist!"
+                                exit 1
+                            fi
+
                             cd ${PROJECT_DIR}
                             echo "Gate Passed! Starting Deployment for ${PROJECT}..."
 
                             git pull origin ${ENV_NAME}
 
                             if [ "${PROJECT}" = "vue" ] || [ "${PROJECT}" = "next" ]; then
+                                npm install
                                 npm run build -- --mode ${ENV_NAME}
                                 if [ "${PROJECT}" = "next" ]; then
                                     pm2 restart "Next-${ENV_NAME}"
                                     pm2 save
                                 fi
                             elif [ "${PROJECT}" = "laravel" ]; then
+                                composer install --no-interaction --prefer-dist --optimize-autoloader
                                 php artisan optimize
                             fi
                         '
@@ -81,20 +90,19 @@ pipeline {
         }
     } 
 
-    // 4. Post section ko uncomment kar diya hai
     post {
         success {
             sh """
             curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"✅ ${PROJECT} → ${ENV_NAME} Deployed Successfully!"}' \
+            --data '{"text":"✅ *${PROJECT}* → *${ENV_NAME}* Deployed Successfully! 🚀"}' \
             $SLACK_WEBHOOK
             """
         }
         failure {
-            // 5. Yahan ab hum 'env.FAILED_STAGE' use kar rahay hain
+            // 3. Ab ye updated 'FAILED_STAGE' use karega (bina 'env.' ke)
             sh """
             curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ ${PROJECT} → ${ENV_NAME} Deployment Failed!\\n⚠️ Failed at Stage: *${env.FAILED_STAGE}*"}' \
+            --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${FAILED_STAGE}* \\n🔗 <${env.BUILD_URL}console|Check Logs Here>"}' \
             $SLACK_WEBHOOK
             """
         }
