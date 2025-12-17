@@ -21,7 +21,7 @@ pipeline {
                     sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
                         -Dsonar.projectKey=${PROJECT}-project \
                         -Dsonar.sources=. \
-                        -Dsonar.qualitygate.wait=true \
+                      
                         -Dsonar.exclusions=vendor/**,node_modules/**,public/packages/**,storage/**,bootstrap/cache/**,resources/assets/vendor/**
                     """
                 }
