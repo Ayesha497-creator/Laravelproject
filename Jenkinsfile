@@ -20,7 +20,7 @@ pipeline {
         withSonarQubeEnv('SonarQube-Server') {
             sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
                 -Dsonar.projectKey=${PROJECT}-project \
-                -Dsonar.sources=. \
+                -Dsonar.sources=app,config,routes \
                 -Dsonar.exclusions=vendor/**,node_modules/**,public/packages/**,storage/**,bootstrap/cache/**,resources/assets/vendor/**
             """
         }
