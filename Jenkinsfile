@@ -7,11 +7,14 @@ pipeline {
         PROJECT     = "laravel"
         ENV_NAME    = "${BRANCH_NAME}"
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK') 
+        // 1. Ek global variable define karein
+        CURRENT_STAGE = "Initialization"
     }
 
     stages {  
         stage('SonarQube Analysis') {
             steps {
+                script { env.CURRENT_STAGE = "SonarQube Analysis" } // Update stage name
                 withSonarQubeEnv('SonarQube-Server') {
                     sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
                         -Dsonar.projectKey=${PROJECT}-project \
@@ -24,8 +27,8 @@ pipeline {
 
         stage("Quality Gate") {
             steps {
+                script { env.CURRENT_STAGE = "Quality Gate" } // Update stage name
                 timeout(time: 1, unit: 'HOURS') {
-                    // Agar ye fail hoga, to automatic failure block mein "Quality Gate" stage name jayega
                     waitForQualityGate abortPipeline: true
                 }
             }
@@ -33,7 +36,8 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                script {
+                script { 
+                    env.CURRENT_STAGE = "Deploy" // Update stage name
                     def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
                     
                     sshagent(['jenkins-deploy-key']) {
@@ -42,9 +46,7 @@ pipeline {
                                 set -e
                                 cd ${PROJECT_DIR}
                                 echo "Gate Passed! Starting Deployment for ${PROJECT}..."
-
                                 git pull origin ${ENV_NAME}
-
                                 if [ "${PROJECT}" = "vue" ] || [ "${PROJECT}" = "next" ]; then
                                     npm run build -- --mode ${ENV_NAME}
                                     if [ "${PROJECT}" = "next" ]; then
@@ -72,12 +74,10 @@ pipeline {
         }
         failure {
             script {
-                // Ye line sabse important hai: Ye khud dhoondti hai ke kaunsi stage fail hui
-                def failedStage = env.STAGE_NAME
-                
+                // 2. Ab yahan wahi stage aayegi jahan error aaya tha
                 sh """
                 curl -X POST -H 'Content-type: application/json' \
-                --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${failedStage}*"}' \
+                --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${env.CURRENT_STAGE}*"}' \
                 $SLACK_WEBHOOK
                 """
             }
