@@ -73,15 +73,13 @@ pipeline {
         success {
             sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"✅ *${PROJECT}* → *${ENV_NAME}* Deployed Successfully! 🚀\"}' $SLACK_WEBHOOK"
         }
-        failure {
+       failure {
             script {
-                // Agar ACTUAL_STAGE set nahi hua to fallback use hoga
                 def failedAt = env.ACTUAL_STAGE ?: "Pipeline Initialization"
-                
                 sh """
                 curl -X POST -H 'Content-type: application/json' \
                 --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${failedAt}*"}' \
-                $SLACK_WEBHOOK
+                ${SLACK_WEBHOOK}
                 """
             }
         }
