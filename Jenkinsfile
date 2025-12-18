@@ -7,7 +7,6 @@ pipeline {
         PROJECT = "laravel"
         ENV_NAME = "${BRANCH_NAME}"         
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
-        // Upar se FAILURE_MSG hata diya hai taaki update ho sakay
     }
 
     stages {
@@ -30,17 +29,19 @@ pipeline {
         stage("Quality Gate") {
             steps {
                 script {
-                    env.FAILURE_MSG = STAGE_NAME
+                    env.FAILURE_MSG = STAGE_NAME // Pehle stage name set karein
                     try {
                         timeout(time: 1, unit: 'HOURS') {
                             def qg = waitForQualityGate()
                             if (qg.status != 'OK') {
-                                env.FAILURE_MSG = "Quality Gate (${qg.status})"
+                                // Status ko msg mein add nahi karenge taaki clean "Quality Gate Failed" aaye
                                 error "Quality Gate Failed"
                             }
                         }
                     } catch (e) {
-                        error env.FAILURE_MSG
+                        // Slack ke liye msg update karein
+                        env.FAILURE_MSG = "Quality Gate Failed"
+                        error "Quality Gate Failed"
                     }
                 }
             }
@@ -85,7 +86,6 @@ pipeline {
         }
         failure {
             script {
-                // Agar FAILURE_MSG set nahi hua toh default value use karein
                 def finalStage = env.FAILURE_MSG ?: "Initial Setup"
                 sh """
                 curl -X POST -H 'Content-type: application/json' \
