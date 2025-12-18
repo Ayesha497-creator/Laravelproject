@@ -7,9 +7,7 @@ pipeline {
         PROJECT = "laravel"
         ENV_NAME = "${BRANCH_NAME}"         
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
-        // Hum sirf aik variable use karenge jo built-in hota hai lekin hum 
-        // usay har stage ke start mein stage ka naam de denge.
-        FAILURE_MSG = "Unknown Stage" 
+        // Upar se FAILURE_MSG hata diya hai taaki update ho sakay
     }
 
     stages {
@@ -42,7 +40,6 @@ pipeline {
                             }
                         }
                     } catch (e) {
-                        // Agar sonar fail hua toh message update ho chuka hoga
                         error env.FAILURE_MSG
                     }
                 }
@@ -61,10 +58,12 @@ pipeline {
                             set -e
                             cd ${PROJECT_DIR}
                             echo "Starting Deployment for ${PROJECT}..."
+
                             git pull origin ${ENV_NAME}
 
                             if [ "${PROJECT}" = "vue" ] || [ "${PROJECT}" = "next" ]; then
-                                npm install && npm run build 
+                                npm install
+                                npm run build 
                                 if [ "${PROJECT}" = "next" ]; then
                                     pm2 restart "Next-${ENV_NAME}" || pm2 start npm --name "Next-${ENV_NAME}" -- start
                                     pm2 save
@@ -85,12 +84,15 @@ pipeline {
             sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"✅ *${PROJECT}* → *${ENV_NAME}* Deployed Successfully! 🚀\"}' $SLACK_WEBHOOK"
         }
         failure {
-            // Sirf aik post block jo LAST failure message uthayega
-            sh """
-            curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Failed at: *${env.FAILURE_MSG}*"}' \
-            ${SLACK_WEBHOOK}
-            """
+            script {
+                // Agar FAILURE_MSG set nahi hua toh default value use karein
+                def finalStage = env.FAILURE_MSG ?: "Initial Setup"
+                sh """
+                curl -X POST -H 'Content-type: application/json' \
+                --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Failed at: *${finalStage}*"}' \
+                ${SLACK_WEBHOOK}
+                """
+            }
         }
     }
 }
