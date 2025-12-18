@@ -15,7 +15,7 @@ pipeline {
                 script { env.ACTUAL_STAGE = "SonarQube Analysis" }
                 withSonarQubeEnv('SonarQube-Server') {
                     sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
-                        -Dsonar.projectKey=laravel-project \
+                        -Dsonar.projectKey=${PROJECT}-project \
                         -Dsonar.sources=. \
                     """
                 }
