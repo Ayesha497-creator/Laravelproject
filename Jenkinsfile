@@ -1,8 +1,10 @@
-def FAILED_STAGE = "Initialization"
 pipeline {
     agent any
 
     environment {
+        // 1. Variable yahan define karein (Global access ke liye)
+        FAILED_STAGE = "Initialization" 
+        
         REMOTE_USER = "ubuntu"
         REMOTE_HOST = "13.61.68.173"
         PROJECT = "laravel"
@@ -11,25 +13,24 @@ pipeline {
     }
 
     stages {  
-       stage('SonarQube Analysis') {
-    steps {
-        script { 
-            FAILED_STAGE = "SonarQube Analysis" 
+        stage('SonarQube Analysis') {
+            steps {
+                // 2. Variable update karein (env. use karke)
+                script { env.FAILED_STAGE = "SonarQube Analysis" }
+                
+                withSonarQubeEnv('SonarQube-Server') {
+                    sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
+                        -Dsonar.projectKey=${PROJECT}-project \
+                        -Dsonar.sources=. \
+                        -Dsonar.exclusions=vendor/**,node_modules/**,public/packages/**,storage/**,bootstrap/cache/**,resources/assets/vendor/**
+                    """
+                }
+            }
         }
-        
-        withSonarQubeEnv('SonarQube-Server') {
-            sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
-                -Dsonar.projectKey=${PROJECT}-project \
-                -Dsonar.sources=app,config,routes \
-                -Dsonar.exclusions=vendor/**,node_modules/**,public/packages/**,storage/**,bootstrap/cache/**,resources/assets/vendor/**
-            """
-        }
-    }
-}
 
         stage("Quality Gate") {
             steps {
-                script { FAILED_STAGE = "Quality Gate" }
+                script { env.FAILED_STAGE = "Quality Gate" }
                 
                 timeout(time: 1, unit: 'HOURS') {
                     waitForQualityGate abortPipeline: true
@@ -44,13 +45,15 @@ pipeline {
                 }
             }
             steps {
+                script { env.FAILED_STAGE = "Deploy Stage" }
+                
+                // Variable for cleaner script
                 script {
-                    FAILED_STAGE = "Deploy Stage"
-                    
-                    def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
+                   PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
+                }
 
-                    sshagent(['jenkins-deploy-key']) {
-                        sh """
+                sshagent(['jenkins-deploy-key']) {
+                    sh """
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
                             set -e
                             cd ${PROJECT_DIR}
@@ -68,8 +71,7 @@ pipeline {
                                 php artisan optimize
                             fi
                         '
-                        """
-                    }
+                    """
                 }
             }
         }
@@ -84,10 +86,10 @@ pipeline {
             """
         }
         failure {
-          
-           sh """
+            // 3. Yahan Global variable access hoga
+            sh """
             curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${FAILED_STAGE}*"}' \
+            --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${env.FAILED_STAGE}*"}' \
             $SLACK_WEBHOOK
             """
         }
