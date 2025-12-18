@@ -29,17 +29,15 @@ pipeline {
         stage("Quality Gate") {
             steps {
                 script {
-                    env.FAILURE_MSG = STAGE_NAME // Pehle stage name set karein
+                    env.FAILURE_MSG = STAGE_NAME 
                     try {
                         timeout(time: 1, unit: 'HOURS') {
                             def qg = waitForQualityGate()
                             if (qg.status != 'OK') {
-                                // Status ko msg mein add nahi karenge taaki clean "Quality Gate Failed" aaye
                                 error "Quality Gate Failed"
                             }
                         }
                     } catch (e) {
-                        // Slack ke liye msg update karein
                         env.FAILURE_MSG = "Quality Gate Failed"
                         error "Quality Gate Failed"
                     }
