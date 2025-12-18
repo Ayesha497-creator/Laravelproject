@@ -9,18 +9,21 @@ pipeline {
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
     }
 
-    stages {  
-        stage('SonarQube Analysis') {
-            steps {
-                script { env.ACTUAL_STAGE = "SonarQube Analysis" }
-                withSonarQubeEnv('SonarQube-Server') {
-                    sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
-                        -Dsonar.projectKey=${PROJECT}-project \
-                        -Dsonar.sources=. \
-                    """
-                }
-            }
+  stage('SonarQube Analysis') {
+    steps {
+        script { env.ACTUAL_STAGE = "SonarQube Analysis" }
+        withSonarQubeEnv('SonarQube-Server') {
+            sh """
+            export NODE_OPTIONS="--max-old-space-size=4096"
+            ${tool 'sonar-scanner'}/bin/sonar-scanner \
+                -Dsonar.projectKey=${PROJECT}-project \
+                -Dsonar.sources=. \
+                -Dsonar.javascript.node.maxspace=4096 \
+                -Dsonar.exclusions=**/node_modules/**,**/vendor/**,**/public/packages/**
+            """
         }
+    }
+}
 
         stage("Quality Gate") {
             steps {
