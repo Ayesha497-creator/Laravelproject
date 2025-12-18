@@ -9,21 +9,22 @@ pipeline {
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
     }
 
-  stage('SonarQube Analysis') {
-    steps {
-        script { env.ACTUAL_STAGE = "SonarQube Analysis" }
-        withSonarQubeEnv('SonarQube-Server') {
-            sh """
-            export NODE_OPTIONS="--max-old-space-size=4096"
-            ${tool 'sonar-scanner'}/bin/sonar-scanner \
-                -Dsonar.projectKey=${PROJECT}-project \
-                -Dsonar.sources=. \
-                -Dsonar.javascript.node.maxspace=4096 \
-                -Dsonar.exclusions=**/node_modules/**,**/vendor/**,**/public/packages/**
-            """
+    stages {  // <--- Ye missing tha
+        stage('SonarQube Analysis') {
+            steps {
+                script { env.ACTUAL_STAGE = "SonarQube Analysis" }
+                withSonarQubeEnv('SonarQube-Server') {
+                    sh """
+                    export NODE_OPTIONS="--max-old-space-size=4096"
+                    ${tool 'sonar-scanner'}/bin/sonar-scanner \
+                        -Dsonar.projectKey=${PROJECT}-project \
+                        -Dsonar.sources=. \
+                        -Dsonar.javascript.node.maxspace=4096 \
+                        -Dsonar.exclusions=**/node_modules/**,**/vendor/**,**/public/packages/**
+                    """
+                }
+            }
         }
-    }
-}
 
         stage("Quality Gate") {
             steps {
@@ -69,13 +70,13 @@ pipeline {
                 }
             }
         }
-    } 
+    } // <--- Stages block yahan band ho raha hai
 
     post {
         success {
             sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"✅ *${PROJECT}* → *${ENV_NAME}* Deployed Successfully! 🚀\"}' $SLACK_WEBHOOK"
         }
-       failure {
+        failure {
             script {
                 def failedAt = env.ACTUAL_STAGE ?: "Pipeline Initialization"
                 sh """
