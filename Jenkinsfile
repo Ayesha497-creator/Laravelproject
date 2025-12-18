@@ -7,11 +7,15 @@ pipeline {
         PROJECT = "laravel"
         ENV_NAME = "${BRANCH_NAME}"         
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
+        // Hum sirf aik variable use karenge jo built-in hota hai lekin hum 
+        // usay har stage ke start mein stage ka naam de denge.
+        FAILURE_MSG = "Unknown Stage" 
     }
 
     stages {
         stage('SonarQube Analysis') {
             steps {
+                script { env.FAILURE_MSG = STAGE_NAME }
                 withSonarQubeEnv('SonarQube-Server') {
                     sh """
                     export NODE_OPTIONS="--max-old-space-size=4096"
@@ -28,13 +32,18 @@ pipeline {
         stage("Quality Gate") {
             steps {
                 script {
+                    env.FAILURE_MSG = STAGE_NAME
                     try {
                         timeout(time: 1, unit: 'HOURS') {
                             def qg = waitForQualityGate()
-                            if (qg.status != 'OK') error "Quality Gate Failed"
+                            if (qg.status != 'OK') {
+                                env.FAILURE_MSG = "Quality Gate (${qg.status})"
+                                error "Quality Gate Failed"
+                            }
                         }
                     } catch (e) {
-                        error "Quality Gate" // Taaki STAGE_NAME mein yahi naam jaye
+                        // Agar sonar fail hua toh message update ho chuka hoga
+                        error env.FAILURE_MSG
                     }
                 }
             }
@@ -44,6 +53,7 @@ pipeline {
             when { expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' } }
             steps {
                 script {
+                    env.FAILURE_MSG = STAGE_NAME
                     def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
                     sshagent(['jenkins-deploy-key']) {
                         sh """
@@ -51,12 +61,10 @@ pipeline {
                             set -e
                             cd ${PROJECT_DIR}
                             echo "Starting Deployment for ${PROJECT}..."
-
                             git pull origin ${ENV_NAME}
 
                             if [ "${PROJECT}" = "vue" ] || [ "${PROJECT}" = "next" ]; then
-                                npm install
-                                npm run build 
+                                npm install && npm run build 
                                 if [ "${PROJECT}" = "next" ]; then
                                     pm2 restart "Next-${ENV_NAME}" || pm2 start npm --name "Next-${ENV_NAME}" -- start
                                     pm2 save
@@ -77,10 +85,10 @@ pipeline {
             sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"✅ *${PROJECT}* → *${ENV_NAME}* Deployed Successfully! 🚀\"}' $SLACK_WEBHOOK"
         }
         failure {
-            // STAGE_NAME built-in variable hai jo us stage ka naam uthayega jahan pipeline ruki
+            // Sirf aik post block jo LAST failure message uthayega
             sh """
             curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${STAGE_NAME}*"}' \
+            --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Failed at: *${env.FAILURE_MSG}*"}' \
             ${SLACK_WEBHOOK}
             """
         }
