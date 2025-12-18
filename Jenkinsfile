@@ -85,13 +85,12 @@ pipeline {
             $SLACK_WEBHOOK
             """
         }
-        failure {
-            // 3. Yahan Global variable access hoga
-            sh """
-            curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${env.FAILED_STAGE}*"}' \
-            $SLACK_WEBHOOK
-            """
-        }
+       failure {
+    sh """
+    curl -X POST -H 'Content-type: application/json' \
+    --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${env.STAGE_NAME}*"}' \
+    $SLACK_WEBHOOK
+    """
+}
     }
 }
