@@ -4,24 +4,19 @@ pipeline {
     environment {
         REMOTE_USER = "ubuntu"
         REMOTE_HOST = "13.61.68.173"
-        PROJECT     = "laravel"
-        ENV_NAME    = "${BRANCH_NAME}"
-        SLACK_WEBHOOK = credentials('SLACK_WEBHOOK') 
-        // Isay yahan define na karein agar update nahi ho raha
+        PROJECT = "laravel"
+        ENV_NAME = "${BRANCH_NAME}"         
+        SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
     }
 
     stages {  
         stage('SonarQube Analysis') {
             steps {
-                script { 
-                    // Global environment update
-                    env.ACTUAL_STAGE = "SonarQube Analysis" 
-                }
+                script { env.ACTUAL_STAGE = "SonarQube Analysis" }
                 withSonarQubeEnv('SonarQube-Server') {
                     sh """${tool 'sonar-scanner'}/bin/sonar-scanner \
-                        -Dsonar.projectKey=${PROJECT}-project \
+                        -Dsonar.projectKey=laravel-project \
                         -Dsonar.sources=. \
-                        -Dsonar.exclusions=vendor/**,node_modules/**,storage/**
                     """
                 }
             }
@@ -29,9 +24,7 @@ pipeline {
 
         stage("Quality Gate") {
             steps {
-                script { 
-                    env.ACTUAL_STAGE = "Quality Gate" 
-                }
+                script { env.ACTUAL_STAGE = "Quality Gate" }
                 timeout(time: 1, unit: 'HOURS') {
                     waitForQualityGate abortPipeline: true
                 }
@@ -39,14 +32,37 @@ pipeline {
         }
 
         stage('Deploy') {
+            when {
+                expression { 
+                    return currentBuild.result == null || currentBuild.result == 'SUCCESS' 
+                }
+            }
             steps {
-                script { 
+                script {
+                    // Yahan se aapka original code shuru hota hai
                     env.ACTUAL_STAGE = "Deploy" 
                     def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
-                    
+
                     sshagent(['jenkins-deploy-key']) {
-                        sh "ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} 'cd ${PROJECT_DIR} && git pull origin ${ENV_NAME}'"
-                        // ... baaki deploy logic ...
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                            set -e
+                            cd ${PROJECT_DIR}
+                            echo "Gate Passed! Starting Deployment for ${PROJECT}..."
+
+                            git pull origin ${ENV_NAME}
+
+                            if [ "${PROJECT}" = "vue" ] || [ "${PROJECT}" = "next" ]; then
+                                npm run build 
+                                if [ "${PROJECT}" = "next" ]; then
+                                    pm2 restart "Next-${ENV_NAME}"
+                                    pm2 save
+                                fi
+                            elif [ "${PROJECT}" = "laravel" ]; then
+                                php artisan optimize
+                            fi
+                        '
+                        """
                     }
                 }
             }
@@ -59,8 +75,8 @@ pipeline {
         }
         failure {
             script {
-                // Agar ACTUAL_STAGE null hai (shuru mein hi fail ho gaya), to fallback use karein
-                def failedAt = env.ACTUAL_STAGE ?: "Pipeline Initialization/Setup"
+                // Agar ACTUAL_STAGE set nahi hua to fallback use hoga
+                def failedAt = env.ACTUAL_STAGE ?: "Pipeline Initialization"
                 
                 sh """
                 curl -X POST -H 'Content-type: application/json' \
