@@ -39,7 +39,6 @@ pipeline {
             }
             steps {
                 script {
-                    // Yahan se aapka original code shuru hota hai
                     env.ACTUAL_STAGE = "Deploy" 
                     def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
 
