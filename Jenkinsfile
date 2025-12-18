@@ -77,7 +77,7 @@ pipeline {
         }
     } 
 
-    post {
+post {
         success {
             sh """
             curl -X POST -H 'Content-type: application/json' \
@@ -85,12 +85,13 @@ pipeline {
             $SLACK_WEBHOOK
             """
         }
-       failure {
-    sh """
-    curl -X POST -H 'Content-type: application/json' \
-    --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${env.STAGE_NAME}*"}' \
-    $SLACK_WEBHOOK
-    """
-}
+        failure {
+            // Yahan wapis FAILED_STAGE use karein kyunke aapne stages mein isay update kiya hai
+            sh """
+            curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Deployment Failed! \\n⚠️ Failed at Stage: *${env.FAILED_STAGE}*"}' \
+            $SLACK_WEBHOOK
+            """
+        }
     }
 }
