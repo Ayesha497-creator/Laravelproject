@@ -21,7 +21,6 @@ pipeline {
                         -Dsonar.projectKey=${PROJECT}-project \
                         -Dsonar.sources=. \
                         -Dsonar.javascript.node.maxspace=4096 \
-                        -Dsonar.exclusions=**/node_modules/**,**/vendor/**,**/public/packages/**
                     """
                 }
             }
