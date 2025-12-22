@@ -4,8 +4,8 @@ pipeline {
     environment {
         REMOTE_USER = "ubuntu"
         REMOTE_HOST = "13.61.68.173"
-        PROJECT = "laravel" // Isko manually "vue" ya "Next" kar sakte hain testing ke liye
-        ENV_NAME = "${env.BRANCH_NAME}"         
+        PROJECT = "laravel"
+        ENV_NAME = "${env.BRANCH_NAME}"
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
     }
 
@@ -30,7 +30,7 @@ pipeline {
         stage("Quality Gate") {
             steps {
                 script {
-                    env.FAILURE_MSG = STAGE_NAME 
+                    env.FAILURE_MSG = STAGE_NAME
                     try {
                         timeout(time: 1, unit: 'HOURS') {
                             def qg = waitForQualityGate()
@@ -52,9 +52,8 @@ pipeline {
             steps {
                 script {
                     env.FAILURE_MSG = STAGE_NAME
-                    // Path matching your server: /var/www/html/development/laravel
                     def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
-                    
+
                     sshagent(['jenkins-deploy-key']) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
@@ -65,15 +64,12 @@ pipeline {
                             git pull origin ${ENV_NAME}
 
                             if [ "${PROJECT}" = "vue" ] || [ "${PROJECT}" = "Next" ]; then
-                                npm install
-                                npm run build 
+                                npm run build
                                 if [ "${PROJECT}" = "Next" ]; then
-                                    # Restarting PM2 process named like Next-development
                                     pm2 restart "Next-${ENV_NAME}" || pm2 start npm --name "Next-${ENV_NAME}" -- start
                                     pm2 save
                                 fi
                             elif [ "${PROJECT}" = "laravel" ]; then
-                                # Optional: composer install --no-dev
                                 php artisan optimize
                                 php artisan config:cache
                             fi
