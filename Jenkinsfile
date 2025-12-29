@@ -1,78 +1,57 @@
+
 pipeline {
     agent any
 
     environment {
         REMOTE_USER = "ubuntu"
         REMOTE_HOST = "13.61.68.173"
-        PROJECT = "laravel"
-        ENV_NAME = "${env.BRANCH_NAME}"
+        PROJECT     = "Laravelproject" 
+        ENV_NAME    = "${BRANCH_NAME}"         
+        TEST_BRANCH = "test" 
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
     }
 
     stages {
-        /* Commented for testing deployment speed
-        stage('SonarQube Analysis') {
-            steps {
-                script { env.FAILURE_MSG = STAGE_NAME }
-                withSonarQubeEnv('SonarQube-Server') {
-                    sh """
-                    export NODE_OPTIONS="--max-old-space-size=4096"
-                    ${tool 'sonar-scanner'}/bin/sonar-scanner \
-                        -Dsonar.projectKey=${PROJECT}-project \
-                        -Dsonar.sources=. \
-                        -Dsonar.javascript.node.maxspace=4096 \
-                    """
-                }
-            }
-        }
-
-        stage("Quality Gate") {
+        stage('Quality Check') {
+            when { branch "${TEST_BRANCH}" }
             steps {
                 script {
-                    env.FAILURE_MSG = STAGE_NAME
-                    try {
-                        timeout(time: 1, unit: 'HOURS') {
-                            def qg = waitForQualityGate()
-                            if (qg.status != 'OK') {
-                                error "Quality Gate Failed"
-                            }
+                    withSonarQubeEnv('SonarQube-Server') {
+                        sh "${tool 'sonar-scanner'}/bin/sonar-scanner -Dsonar.projectKey=${PROJECT}-project -Dsonar.sources=. -Dsonar.exclusions=**/node_modules/**,**/vendor/**"
+                    }
+                    timeout(time: 10, unit: 'MINUTES') {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "QUALITY_GATE_FAILED" 
                         }
-                    } catch (e) {
-                        env.FAILURE_MSG = "Quality Gate Failed"
-                        error "Quality Gate Failed"
                     }
                 }
             }
         }
-        */
 
         stage('Deploy') {
-            when { expression { return currentBuild.result == null || currentBuild.result == 'SUCCESS' } }
             steps {
                 script {
-                    env.FAILURE_MSG = STAGE_NAME
-                    def PROJECT_DIR = "/var/www/html/${ENV_NAME}/${PROJECT}"
-
                     sshagent(['jenkins-deploy-key']) {
                         sh """
-                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
-                            set -e
-                            cd ${PROJECT_DIR}
-                            echo "Starting Deployment for ${PROJECT} in ${ENV_NAME} environment..."
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                                set -e
+                                cd /var/www/html/${ENV_NAME}/${PROJECT}
+                                git pull origin ${ENV_NAME}
 
-                            git pull origin ${ENV_NAME}
-
-                            if [ "${PROJECT}" = "vue" ] || [ "${PROJECT}" = "Next" ]; then
-                                npm run build
-                                if [ "${PROJECT}" = "Next" ]; then
-                                    pm2 restart "Next-${ENV_NAME}" || pm2 start npm --name "Next-${ENV_NAME}" -- start
-                                    pm2 save
-                                fi
-                            elif [ "${PROJECT}" = "laravel" ]; then
-                                php artisan optimize
-                                php artisan config:cache
-                            fi
-                        '
+                                case "${PROJECT}" in
+                                    "vue"|"next")
+                                        npm run build
+                                        if [ "${PROJECT}" = "next" ]; then
+                                            pm2 restart "${PROJECT}-${ENV_NAME}" 
+                                            pm2 save
+                                        fi
+                                        ;;
+                                    "laravel")
+                                        php artisan optimize
+                                        ;;
+                                esac
+                            '
                         """
                     }
                 }
@@ -81,18 +60,20 @@ pipeline {
     }
 
     post {
-        success {
-            sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"✅ *${PROJECT}* → *${ENV_NAME}* Deployed Successfully! 🚀\"}' $SLACK_WEBHOOK"
-        }
         failure {
             script {
-                def finalStage = env.FAILURE_MSG ?: "Initial Setup"
-                sh """
-                curl -X POST -H 'Content-type: application/json' \
-                --data '{"text":"❌ *${PROJECT}* → *${ENV_NAME}* Failed at: *${finalStage}*"}' \
-                ${SLACK_WEBHOOK}
-                """
+                def failureType = "Deployment Stage"
+                
+                // Agar test branch thi aur fail hui, to zahir hai quality check hi fail hua hoga
+                if (env.BRANCH_NAME == env.TEST_BRANCH) {
+                     failureType = "Quality Check"
+                }
+
+                sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"❌ *${PROJECT}* (${ENV_NAME}) - *${failureType} Failed!*\"}' ${SLACK_WEBHOOK}"
             }
+        }
+        success {
+            sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"✅ *${PROJECT}* (${ENV_NAME}) - Deployed Successfully!\"}' ${SLACK_WEBHOOK}"
         }
     }
 }
