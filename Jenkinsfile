@@ -4,7 +4,7 @@ pipeline {
 
     environment {
         REMOTE_USER = "ubuntu"
-        REMOTE_HOST = "13.61.68.173"
+        REMOTE_HOST = "13.62.178.120"
         PROJECT     = "Laravelproject" 
         ENV_NAME    = "${BRANCH_NAME}"         
         TEST_BRANCH = "test" 
@@ -34,6 +34,8 @@ pipeline {
                 script {
                     sshagent(['jenkins-deploy-key']) {
                         sh """
+                                                ssh-keyscan -H ${REMOTE_HOST} >> ~/.ssh/known_hosts
+
                             ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
                                 set -e
                                 cd /var/www/html/${ENV_NAME}/${PROJECT}
