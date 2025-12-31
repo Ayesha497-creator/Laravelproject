@@ -1,12 +1,11 @@
 
-
 pipeline {
     agent any
 
     environment {
         REMOTE_USER = "ubuntu"
         REMOTE_HOST = "13.62.178.120"
-        PROJECT     = "Laravelproject" 
+        PROJECT     = "laravelproject" 
         ENV_NAME    = "${BRANCH_NAME}"         
         TEST_BRANCH = "test" 
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
@@ -30,31 +29,26 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Docker Deploy') {
             steps {
                 script {
                     sshagent(['jenkins-deploy-key']) {
                         sh """
-                                                ssh-keyscan -H ${REMOTE_HOST} >> ~/.ssh/known_hosts
+                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
+                            set -e
+                            cd /var/www/html/${ENV_NAME}/${PROJECT}
+                       
+                            git pull origin ${ENV_NAME}
 
-                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
-                                set -e
-                                cd /var/www/html/${ENV_NAME}/${PROJECT}
-                                git pull origin ${ENV_NAME}
+                            docker network create my_app_net || true
+                            docker build -t ${PROJECT}:${ENV_NAME} .
 
-                                case "${PROJECT}" in
-                                    "vue"|"next")
-                                        npm run build
-                                        if [ "${PROJECT}" = "next" ]; then
-                                            pm2 restart "${PROJECT}-${ENV_NAME}" 
-                                            pm2 save
-                                        fi
-                                        ;;
-                                    "laravel")
-                                        php artisan optimize
-                                        ;;
-                                esac
-                            '
+                            docker stop ${PROJECT}-${ENV_NAME} || true
+                            docker rm ${PROJECT}-${ENV_NAME} || true
+                            docker run -d --name ${PROJECT}-${ENV_NAME} --network my_app_net ${PROJECT}:${ENV_NAME}
+                            
+                            docker image prune -f
+                        '
                         """
                     }
                 }
@@ -67,7 +61,6 @@ pipeline {
             script {
                 def failureType = "Deployment Stage"
                 
-                // Agar test branch thi aur fail hui, to zahir hai quality check hi fail hua hoga
                 if (env.BRANCH_NAME == env.TEST_BRANCH) {
                      failureType = "Quality Check"
                 }
