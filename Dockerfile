@@ -12,5 +12,5 @@ RUN composer install --no-dev --optimize-autoloader
 RUN cp .env.example .env || true
 RUN php artisan key:generate
 
-EXPOSE 9000
-CMD ["php-fpm"]
+EXPOSE 80
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=80"]
