@@ -1,12 +1,17 @@
 FROM php:8.1-fpm-alpine
 
-RUN apk add --no-cache git unzip libpng-dev libzip-dev
-RUN docker-php-ext-install pdo_mysql gd zip
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+
+RUN install-php-extensions pdo_mysql gd zip
+
+RUN apk add --no-cache git unzip
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 COPY . .
+
+RUN chmod -R 777 storage bootstrap/cache
 
 RUN composer install --no-dev --optimize-autoloader
 RUN cp .env.example .env || true
