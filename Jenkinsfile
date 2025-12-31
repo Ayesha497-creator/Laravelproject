@@ -45,9 +45,12 @@ pipeline {
 
                             docker stop ${PROJECT}-${ENV_NAME} || true
                             docker rm ${PROJECT}-${ENV_NAME} || true
-                            docker run -d --name ${PROJECT}-${ENV_NAME} --network my_app_net ${PROJECT}:${ENV_NAME}
-                            
-                            docker image prune -f
+docker run -d \
+  --name ${PROJECT}-${ENV_NAME} \
+  --network my_app_net \
+  -v /home/ubuntu/configs/${ENV_NAME}/.env:/var/www/html/.env \
+  ${PROJECT}:${ENV_NAME}
+  docker image prune -f
                         '
                         """
                     }
