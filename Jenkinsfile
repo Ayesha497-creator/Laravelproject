@@ -5,7 +5,7 @@ pipeline {
     environment {
         REMOTE_USER = "ubuntu"
         REMOTE_HOST = "13.62.178.120"
-        PROJECT     = "Laravelproject" 
+        PROJECT     = "laravelproject" 
         ENV_NAME    = "${BRANCH_NAME}"         
         TEST_BRANCH = "test" 
         SLACK_WEBHOOK = credentials('SLACK_WEBHOOK')
