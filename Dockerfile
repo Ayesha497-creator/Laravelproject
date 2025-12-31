@@ -2,8 +2,7 @@ FROM php:8.1-fpm-alpine
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
-RUN install-php-extensions pdo_mysql gd zip
-
+RUN install-php-extensions pdo_mysql gd zip pcntl
 RUN apk add --no-cache git unzip
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
