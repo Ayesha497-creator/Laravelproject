@@ -11,6 +11,7 @@ WORKDIR /var/www/html
 COPY . .
 
 RUN chmod -R 777 storage bootstrap/cache
+RUN composer require laravel/ui
 
 RUN composer install --no-dev --optimize-autoloader
 RUN cp .env.example .env || true
